@@ -1,7 +1,6 @@
 # =========================================================
-# IRRIGAAI
-# Machine Learning-Based Crop Water Requirement
-# Forecasting System
+# IRRIGATEAI
+# AI-Based Irrigation Water Requirement Forecasting System
 # =========================================================
 
 import streamlit as st
@@ -11,9 +10,7 @@ import matplotlib.pyplot as plt
 import requests
 import joblib
 import os
-import folium
 
-from streamlit_folium import st_folium
 from datetime import datetime, timedelta
 
 # =========================================================
@@ -21,7 +18,7 @@ from datetime import datetime, timedelta
 # =========================================================
 
 st.set_page_config(
-    page_title="AIrrigate",
+    page_title="IrrigateAI",
     layout="wide"
 )
 
@@ -29,11 +26,11 @@ st.set_page_config(
 # TITLE
 # =========================================================
 
-st.title("AIrrigate")
+st.title("🌱 IrrigateAI")
 
 st.markdown(
     """
-    ### Machine Learning-Based Crop Water Requirement Forecasting System
+    ### AI-Based Irrigation Water Requirement Forecasting System
     """
 )
 
@@ -41,7 +38,7 @@ st.markdown(
 # MODEL DIRECTORY
 # =========================================================
 
-BASE_DIR = r"."
+BASE_DIR = "."
 
 # =========================================================
 # LOAD SCALER
@@ -56,7 +53,7 @@ scaler = joblib.load(
 )
 
 # =========================================================
-# LOAD SVR MODELS (14 DAYS)
+# LOAD SVR MODELS
 # =========================================================
 
 models = {}
@@ -122,7 +119,7 @@ st.sidebar.write(
 )
 
 # =========================================================
-# CROP INFO
+# CROP INFORMATION
 # =========================================================
 
 st.sidebar.subheader(
@@ -134,67 +131,115 @@ crop_type = st.sidebar.selectbox(
     "Crop Type",
 
     [
-        "Rice",
-        "Corn",
-        "Vegetable"
-    ]
-)
-
-growth_stage = st.sidebar.selectbox(
-
-    "Growth Stage",
-
-    [
-        "Initial Stage",
-        "Development Stage",
-        "Mid-Season Stage",
-        "Late Season Stage"
+        "Lowland Rice"
     ]
 )
 
 # =========================================================
-# FAO Kc DATABASE
+# GROWTH STAGE
+# =========================================================
+
+growth_stage = st.sidebar.selectbox(
+
+    "Growth Stage (% Total Growth Duration)",
+
+    [
+        "0-20%",
+        "20-40%",
+        "40-70%",
+        "70-90%",
+        "Harvest"
+    ]
+)
+
+# =========================================================
+# KC VALUES
 # =========================================================
 
 kc_database = {
 
-    "Rice": {
-
-        "Initial Stage": 1.05,
-        "Development Stage": 1.10,
-        "Mid-Season Stage": 1.20,
-        "Late Season Stage": 0.90
-    },
-
-    "Corn": {
-
-        "Initial Stage": 0.40,
-        "Development Stage": 0.75,
-        "Mid-Season Stage": 1.15,
-        "Late Season Stage": 0.70
-    },
-
-    "Vegetable": {
-
-        "Initial Stage": 0.50,
-        "Development Stage": 0.80,
-        "Mid-Season Stage": 1.05,
-        "Late Season Stage": 0.90
-    }
+    "0-20%": 0.95,
+    "20-40%": 1.05,
+    "40-70%": 1.10,
+    "70-90%": 1.10,
+    "Harvest": 0.61
 }
 
-kc = kc_database[
-    crop_type
-][
-    growth_stage
-]
+kc = kc_database[growth_stage]
 
-st.sidebar.success(
-    f"Estimated Crop Coefficient (Kc): {kc:.2f}"
+# =========================================================
+# SOIL TEXTURE
+# =========================================================
+
+soil_texture = st.sidebar.selectbox(
+
+    "Soil Texture",
+
+    [
+        "Clay",
+        "Silty Clay",
+        "Clay Loam",
+        "Silty Clay Loam",
+        "Sandy Clay Loam",
+        "Sandy Loam"
+    ]
 )
 
 # =========================================================
-# ETo INPUTS
+# PERCOLATION VALUES
+# =========================================================
+
+percolation_database = {
+
+    "Clay": 1.25,
+    "Silty Clay": 1.50,
+    "Clay Loam": 1.75,
+    "Silty Clay Loam": 1.75,
+    "Sandy Clay Loam": 2.00,
+    "Sandy Loam": 4.00
+}
+
+percolation = percolation_database[
+    soil_texture
+]
+
+# =========================================================
+# EFFECTIVE RAINFALL PERCENTAGE
+# =========================================================
+
+effective_rainfall_percent = st.sidebar.slider(
+
+    "Effective Rainfall Percentage (%)",
+
+    min_value=0,
+
+    max_value=100,
+
+    value=80,
+
+    step=5
+)
+
+effective_rainfall_factor = (
+    effective_rainfall_percent / 100
+)
+
+# =========================================================
+# DISPLAY VALUES
+# =========================================================
+
+st.sidebar.success(
+
+    f"Crop Coefficient (Kc): {kc:.2f}"
+)
+
+st.sidebar.info(
+
+    f"Percolation Rate: {percolation:.2f} mm/day"
+)
+
+# =========================================================
+# ETO INPUTS
 # =========================================================
 
 st.sidebar.subheader(
@@ -213,7 +258,7 @@ for i in range(8):
 
         f"{current_date.strftime('%b %d, %Y')}",
 
-        min_value=0.0,
+        min_value=1.0,
 
         max_value=20.0,
 
@@ -232,42 +277,6 @@ for i in range(8):
 
 generate = st.sidebar.button(
     "Generate Forecast"
-)
-
-# =========================================================
-# MAP SECTION
-# =========================================================
-
-st.subheader(
-    "📍 Forecast Location"
-)
-
-map_object = folium.Map(
-
-    location=[LAT, LON],
-
-    zoom_start=15
-)
-
-folium.Marker(
-
-    [LAT, LON],
-
-    popup="UPLB National Agrometeorological Station",
-
-    tooltip="UPLB NAS",
-
-    icon=folium.Icon(
-        color="green",
-        icon="cloud"
-    )
-
-).add_to(map_object)
-
-st_folium(
-    map_object,
-    width=1200,
-    height=400
 )
 
 # =========================================================
@@ -306,7 +315,7 @@ if generate:
     )
 
     # =====================================================
-    # PREDICT 14-DAY ETo
+    # PREDICT 14-DAY ETO
     # =====================================================
 
     eto_predictions = []
@@ -322,7 +331,7 @@ if generate:
         eto_predictions.append(pred)
 
     # =====================================================
-    # FETCH 5-DAY RAINFALL
+    # FETCH 5-DAY RAINFALL FORECAST
     # =====================================================
 
     rainfall_forecast = []
@@ -379,12 +388,48 @@ if generate:
         rainfall_forecast = [0] * 5
 
     # =====================================================
-    # COMPUTE 5-DAY CWR
+    # EFFECTIVE RAINFALL
+    # =====================================================
+
+    effective_rainfall = [
+
+        rainfall_forecast[i]
+        *
+        effective_rainfall_factor
+
+        for i in range(5)
+    ]
+
+    # =====================================================
+    # COMPUTE CWR
     # =====================================================
 
     crop_water_requirement = [
 
-        eto_predictions[i] * kc
+        (
+            eto_predictions[i] * kc
+        )
+        +
+        percolation
+
+        for i in range(5)
+    ]
+
+    # =====================================================
+    # COMPUTE NIR
+    # =====================================================
+
+    net_irrigation_requirement = [
+
+        max(
+
+            crop_water_requirement[i]
+            -
+            effective_rainfall[i],
+
+            0
+
+        )
 
         for i in range(5)
     ]
@@ -432,9 +477,21 @@ if generate:
                 2
             ),
 
+        "Effective Rainfall (mm)":
+            np.round(
+                effective_rainfall,
+                2
+            ),
+
         "Crop Water Requirement (mm/day)":
             np.round(
                 crop_water_requirement,
+                2
+            ),
+
+        "Net Irrigation Requirement (mm/day)":
+            np.round(
+                net_irrigation_requirement,
                 2
             )
     })
@@ -444,7 +501,7 @@ if generate:
     # =====================================================
 
     st.subheader(
-        "📊 5-Day Crop Water Requirement Forecast"
+        "📊 5-Day Irrigation Water Requirement Forecast"
     )
 
     st.dataframe(
@@ -465,7 +522,7 @@ if generate:
     )
 
     # =====================================================
-    # 14-DAY ETo
+    # 14-DAY ETO
     # =====================================================
 
     ax.plot(
@@ -482,7 +539,7 @@ if generate:
     )
 
     # =====================================================
-    # 5-DAY RAINFALL
+    # FORECAST RAINFALL
     # =====================================================
 
     ax.plot(
@@ -495,11 +552,28 @@ if generate:
 
         linewidth=2,
 
-        label="5-Day Rainfall Forecast"
+        label="5-Day Forecast Rainfall"
     )
 
     # =====================================================
-    # 5-DAY CWR
+    # EFFECTIVE RAINFALL
+    # =====================================================
+
+    ax.plot(
+
+        forecast_dates_5,
+
+        effective_rainfall,
+
+        marker='o',
+
+        linewidth=2,
+
+        label="5-Day Effective Rainfall"
+    )
+
+    # =====================================================
+    # CWR
     # =====================================================
 
     ax.plot(
@@ -513,6 +587,23 @@ if generate:
         linewidth=2,
 
         label="5-Day Crop Water Requirement"
+    )
+
+    # =====================================================
+    # NIR
+    # =====================================================
+
+    ax.plot(
+
+        forecast_dates_5,
+
+        net_irrigation_requirement,
+
+        marker='o',
+
+        linewidth=2,
+
+        label="5-Day Net Irrigation Requirement"
     )
 
     ax.set_xlabel(
@@ -541,10 +632,6 @@ if generate:
 
     col1, col2 = st.columns(2)
 
-    # =====================================================
-    # 14-DAY ETo CHART
-    # =====================================================
-
     with col1:
 
         st.subheader(
@@ -562,22 +649,18 @@ if generate:
             index=forecast_dates_14)
         )
 
-    # =====================================================
-    # 5-DAY CWR CHART
-    # =====================================================
-
     with col2:
 
         st.subheader(
-            "5-Day Crop Water Requirement"
+            "5-Day Net Irrigation Requirement"
         )
 
         st.line_chart(
 
             pd.DataFrame({
 
-                "Crop Water Requirement":
-                    crop_water_requirement
+                "Net Irrigation":
+                    net_irrigation_requirement
             },
 
             index=forecast_dates_5)
@@ -614,6 +697,8 @@ st.markdown(
     - Streamlit
     - Support Vector Regression (SVR)
     - OpenWeatherMap API
-    - FAO Crop Coefficient Method
+    - NIA Percolation Values
+    - Effective Rainfall Method
+    - Crop Coefficient Method
     """
 )
